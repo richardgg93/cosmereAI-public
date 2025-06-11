@@ -1,11 +1,10 @@
-
 import requests
 
 from typing import List, Dict
 import json
 
 
-class AzureAIChatComplete():
+class AzureAIChatComplete:
     """Loads or create chat complete models"""
 
     def __init__(
@@ -14,8 +13,7 @@ class AzureAIChatComplete():
         token: str = "",
         model_name: str = "",
     ) -> None:
-        """
-        """ 
+        """ """
         self.endpoint = endpoint
         self.token = token
         self.model_name = model_name
@@ -28,7 +26,7 @@ class AzureAIChatComplete():
 
         Returns:
             np.array: Array with the embeddings.
-        """  
+        """
         data = {
             "messages": messages,
             "temperature": kwargs.get("temperature", 0),
@@ -36,7 +34,10 @@ class AzureAIChatComplete():
         }
 
         chatcomplete_endpoint = f"{self.endpoint}/chat/completions"
-        headers = {'Content-Type':'application/json', 'Authorization':('Bearer '+ self.token)}
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": ("Bearer " + self.token),
+        }
 
         response = requests.post(chatcomplete_endpoint, headers=headers, json=data)
 

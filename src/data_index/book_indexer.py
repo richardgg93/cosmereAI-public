@@ -3,24 +3,27 @@ import pandas as pd
 import re
 
 import sys
+
 sys.path.append("..")
 sys.path.append(".")
 
 from models.embedding_model import AzureAIEmbedding
 from chunker import Chunker
-
 from book import Book
 
-class BookIndexer():
+
+class BookIndexer:
 
     def __init__(
-        self, orig_data_path: str, chunker: Chunker, embedding_model: AzureAIEmbedding, 
+        self,
+        orig_data_path: str,
+        chunker: Chunker,
+        embedding_model: AzureAIEmbedding,
     ):
         self.orig_data_path = orig_data_path
         self.embedding_model = embedding_model
         self.chunker = chunker
         self.files_mapping = []
-
 
         self.index_column_names = [
             "id",
@@ -41,7 +44,14 @@ class BookIndexer():
 
                 # Read documents and store data
                 if extension == ".txt":
-                    self.files_mapping.append({"file": fname, "dir": dir, "root": root, "path_file": path_file})
+                    self.files_mapping.append(
+                        {
+                            "file": fname,
+                            "dir": dir,
+                            "root": root,
+                            "path_file": path_file,
+                        }
+                    )
 
         return self.files_mapping
 
@@ -57,7 +67,7 @@ class BookIndexer():
         """Generate chunks for a book"""
         chunks = self.chunker.split_paragraphs(book.paragraphs)
         return chunks
-    
+
     def _create_df_chunks(self, chunks, document, path):
         """Creates a DF with the extra metadata and the embeddigns for a single file"""
         # Convert to DF
@@ -82,7 +92,7 @@ class BookIndexer():
         all_data = []
         for fmap in self.files_mapping:
             document = fmap["file"]
-            path = fmap["path_file"] 
+            path = fmap["path_file"]
             chunks = fmap["chunks"]
 
             # Create DF from chunks of the file, including the embeddings
@@ -91,7 +101,7 @@ class BookIndexer():
 
         # Concat all DFs and convert to dict
         self.final_data_index = pd.concat(all_data).to_dict(orient="records")
-        
+
         return self.final_data_index
 
     def create_index_data(self):
@@ -104,4 +114,3 @@ class BookIndexer():
         self.load_data()
         self.generate_chunks()
         self.generate_final_data()
-

@@ -1,13 +1,12 @@
 import sys
-sys.path.append("..")
-sys.path.append(".")
-
 import json
 from typing import List, Dict
 from PIL import Image
 
-from azure.search.documents import SearchClient  
+from azure.search.documents import SearchClient
 
+sys.path.append("..")
+sys.path.append(".")
 
 from models.embedding_model import AzureAIEmbedding
 from models.chatcomplete_model import AzureAIChatComplete
@@ -26,7 +25,7 @@ class ChatBot:
     {tools}
 
     When a function is needed you should generate only a valid JSON with the format:
-    {{ 
+    {{
         "function_name": "name of the function"
         "parameters": [
                     "parameter1": "value of the parameter",
@@ -41,7 +40,9 @@ class ChatBot:
     - If a function is needed provide the JSON only.
     """
 
-    ASSISTANT_FINISHER = """You are an assistant. You have last messages of user and tools calling. Provide best answer to the user."""
+    ASSISTANT_FINISHER = (
+        """You are an assistant. You have last messages of user and tools calling. Provide best answer to the user."""
+    )
 
     FILTERER = """Necesitas responder a una pregunta. Para ello vas a recibir información adicional.
     Tu tarea es filtrar dicha información, quedándote solo con aquella que pueda ser relevante
@@ -75,27 +76,33 @@ class ChatBot:
     }
 
     FUNC_CREATE_IMAGE = {
-            "name": "create_image",
-            "description": "Auxiliary function to generate images from a description using an artificial intelligence model like DALL·E. This model only works in English.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "prompt_description": {
-                        "type": "string",
-                        "description": "Description of the image that should be generated with the AI model. As detailed as possible. This parameter should be always in English.",
-                    },
-                    "style_preset": {
-                        "type": "string",
-                        "description": "A style preset to guide the image model towards a particular style. It must be one of: '3d-model', 'analog-film', 'anime', 'cinematic', 'comic-book', 'digital-art', 'enhance', 'fantasy-art', 'isometric', 'line-art', 'low-poly', 'modeling-compound', 'neon-punk', 'origami', 'photographic', 'pixel-art', 'tile-texture'.",
-                    }
+        "name": "create_image",
+        "description": "Auxiliary function to generate images from a description using an artificial intelligence model like DALL·E. This model only works in English.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "prompt_description": {
+                    "type": "string",
+                    "description": "Description of the image that should be generated with the AI model. As detailed as possible. This parameter should be always in English.",
                 },
-                "required": ["prompt_description"],
+                "style_preset": {
+                    "type": "string",
+                    "description": "A style preset to guide the image model towards a particular style. It must be one of: '3d-model', 'analog-film', 'anime', 'cinematic', 'comic-book', 'digital-art', 'enhance', 'fantasy-art', 'isometric', 'line-art', 'low-poly', 'modeling-compound', 'neon-punk', 'origami', 'photographic', 'pixel-art', 'tile-texture'.",
+                },
             },
-        }
+            "required": ["prompt_description"],
+        },
+    }
 
     ASSISTANT_TOOLS = [FUNC_SEARCH_DATA, FUNC_CREATE_IMAGE]
 
-    def __init__(self, embedding_model: AzureAIEmbedding, chatcomplete_model: AzureAIChatComplete, imagegen_model: StabilityAIImageGen, search_client: SearchClient):
+    def __init__(
+        self,
+        embedding_model: AzureAIEmbedding,
+        chatcomplete_model: AzureAIChatComplete,
+        imagegen_model: StabilityAIImageGen,
+        search_client: SearchClient,
+    ):
         """
         Initializes a ChatBot instance.
         """
@@ -117,30 +124,44 @@ class ChatBot:
 
         try:
             # Define initial system message
-            message_init = {"role": "system", "content": self.ASSISTANT.format(tools=str(self.ASSISTANT_TOOLS))}
+            message_init = {
+                "role": "system",
+                "content": self.ASSISTANT.format(tools=str(self.ASSISTANT_TOOLS)),
+            }
 
             # Initialize list to store generated messages
             generated_messages = []
 
             # Request response from model based on the original messages
-            response = self.chatcomplete_model.predict(messages=[message_init] + messages[-20:], temperature=0.4, max_tokens=300, stop=["<|start_header_id|>", "<|end_header_id|>", "<|eot_id|>", "<|reserved_special_token"])
+            response = self.chatcomplete_model.predict(
+                messages=[message_init] + messages[-20:],
+                temperature=0.4,
+                max_tokens=300,
+                stop=[
+                    "<|start_header_id|>",
+                    "<|end_header_id|>",
+                    "<|eot_id|>",
+                    "<|reserved_special_token",
+                ],
+            )
             response_message = response["choices"][0]["message"]["content"]
-            
+
             # Check if the model requested a valid function call
             try:
                 # Parse function
-                f_dict = json.loads(response_message) 
+                f_dict = json.loads(response_message)
                 function_name = f_dict["function_name"]
                 function_args = f_dict["parameters"]
                 method = getattr(self, function_name)
             except Exception as e:
+                print(e)
                 function_name = None
-                
+
             if function_name is not None:
                 print(f_dict)
                 # Call the corresponding method with the provided arguments
                 function_response = method(**function_args)
-                function_response_str = str(function_response) 
+                function_response_str = str(function_response)
                 print(function_response_str)
                 # For images thats enough
                 if function_name == "create_image":
@@ -148,11 +169,30 @@ class ChatBot:
                 # For others generate a final answer
                 else:
                     # Extend conversation with function response
-                    generated_messages.append({"role": "tool", "name": function_name, "content": f"{function_response_str}"})
+                    generated_messages.append(
+                        {
+                            "role": "tool",
+                            "name": function_name,
+                            "content": f"{function_response_str}",
+                        }
+                    )
 
                     # Request a new response from LLM incorporating function response
-                    message_init =  {"role": "system", "content": self.ASSISTANT_FINISHER}
-                    response = self.chatcomplete_model.predict(messages=[message_init] + messages[-20:] + generated_messages, temperature=0.4, max_tokens=300, stop=["<|start_header_id|>", "<|end_header_id|>", "<|eot_id|>", "<|reserved_special_token"])
+                    message_init = {
+                        "role": "system",
+                        "content": self.ASSISTANT_FINISHER,
+                    }
+                    response = self.chatcomplete_model.predict(
+                        messages=[message_init] + messages[-20:] + generated_messages,
+                        temperature=0.4,
+                        max_tokens=300,
+                        stop=[
+                            "<|start_header_id|>",
+                            "<|end_header_id|>",
+                            "<|eot_id|>",
+                            "<|reserved_special_token",
+                        ],
+                    )
                     print(response)
                     response_message = response["choices"][0]["message"]["content"]
 
@@ -164,7 +204,6 @@ class ChatBot:
 
         # Return generated messages and search debug information (if applicable)
         return generated_messages
-
 
     def ask_data(self, search_queries: List[str]) -> str:
         """
@@ -196,10 +235,24 @@ class ChatBot:
                     context = cogs_orig_results[k + i]["content"]
                     message = {
                         "role": "user",
-                        "content": self.FILTERER.format(pregunta=search_query, info_sin_filtrar=context, info_filtrada_prev=filtered_info),
+                        "content": self.FILTERER.format(
+                            pregunta=search_query,
+                            info_sin_filtrar=context,
+                            info_filtrada_prev=filtered_info,
+                        ),
                     }
                     # Request response from LLM to filter the information
-                    response = self.chatcomplete_model.predict(messages=[message], max_tokens=2, temperature=0.01, stop=["<|start_header_id|>", "<|end_header_id|>", "<|eot_id|>", "<|reserved_special_token"])
+                    response = self.chatcomplete_model.predict(
+                        messages=[message],
+                        max_tokens=2,
+                        temperature=0.01,
+                        stop=[
+                            "<|start_header_id|>",
+                            "<|end_header_id|>",
+                            "<|eot_id|>",
+                            "<|reserved_special_token",
+                        ],
+                    )
                     response_message = response["choices"][0]["message"]["content"]
                     # If the response is 'SI' (yes), include the context in filtered_info and cogs_final_results
                     if response_message == "SI":
@@ -215,7 +268,6 @@ class ChatBot:
 
         # Concatenate all filtered data answers with newline separator and return along with search results debug information
         return "\n\n".join(all_data_answers)
-    
 
     def create_image(self, prompt_description: str, style_preset: str) -> Image:
         """

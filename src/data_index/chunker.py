@@ -1,5 +1,6 @@
 import tiktoken
 
+
 class TokenCounter:
 
     def __init__(
@@ -34,11 +35,7 @@ class Chunker:
     This class represents an indexing tool for handling text data and creating search indices.
     """
 
-    def __init__(
-        self,
-        chunk_size: int = 1024,
-        chunk_overlap: int = 100
-    ):
+    def __init__(self, chunk_size: int = 1024, chunk_overlap: int = 100):
         """
         Initializes the Index class with the provided parameters and configures the indexing settings.
 
@@ -77,7 +74,12 @@ class Chunker:
 
                 if len(auxiliar_paragraphs) > 0:
                     chunk_content = "\n".join([p for p in auxiliar_paragraphs])
-                    chunks.append({"content": chunk_content, "tokens": self.token_counter.num_tokens_from_string(chunk_content)})
+                    chunks.append(
+                        {
+                            "content": chunk_content,
+                            "tokens": self.token_counter.num_tokens_from_string(chunk_content),
+                        }
+                    )
 
                     # Overlapping last paragraphs
                     new_auxiliar_paragraphs = []

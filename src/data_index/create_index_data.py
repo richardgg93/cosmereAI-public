@@ -1,8 +1,8 @@
-
 import sys
+import json
+
 sys.path.append("..")
 sys.path.append(".")
-import json
 
 from chunker import Chunker
 from models.embedding_model import AzureAIEmbedding
@@ -25,4 +25,3 @@ final_data_index = book_indexer.final_data_index
 
 with open("/......../data/generated/final_data_index.json", "w") as f:
     json.dump(final_data_index, f)
-

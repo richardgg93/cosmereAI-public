@@ -1,4 +1,3 @@
-
 import requests
 
 import io
@@ -6,7 +5,7 @@ import base64
 from PIL import Image
 
 
-class StabilityAIImageGen():
+class StabilityAIImageGen:
     """Loads or create models for image generation"""
 
     def __init__(
@@ -15,8 +14,7 @@ class StabilityAIImageGen():
         token: str = "",
         model_name: str = "sd3-turbo",
     ) -> None:
-        """
-        """ 
+        """ """
         self.endpoint = endpoint
         self.token = token
         self.model_name = model_name
@@ -29,17 +27,20 @@ class StabilityAIImageGen():
 
         Returns:
             Image: Array with the image.
-        """  
-        data={
+        """
+        data = {
             "prompt": prompt,
             "model": self.model_name,
             "style_preset": kwargs.get("style_preset", None),
-            "negative_prompt": "Be careful with the errors in the generated images. Hands and faces should look right. And text should be properly written."
+            "negative_prompt": "Be careful with the errors in the generated images. Hands and faces should look right. And text should be properly written.",
         }
 
         imagegen_endpoint = f"{self.endpoint}"
-        headers = {'Authorization':('Bearer '+ self.token), "accept": "application/json"}
-        files = {"none": ''}
+        headers = {
+            "Authorization": ("Bearer " + self.token),
+            "accept": "application/json",
+        }
+        files = {"none": ""}
 
         response = requests.post(imagegen_endpoint, headers=headers, data=data, files=files)
 

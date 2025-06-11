@@ -1,8 +1,5 @@
-import os
 from typing import List, Dict
 from azure.search.documents.models import VectorizedQuery
-from azure.search.documents import SearchClient
-
 
 
 def search_knowledgebase_single(search_client, embedding_model, search_query: str) -> List[Dict]:
@@ -23,16 +20,18 @@ def search_knowledgebase_single(search_client, embedding_model, search_query: st
                 - 'content': The content of the search result.
     """
     # Define the vectorized query for searching similar documents
-    vector_query = VectorizedQuery(vector=embedding_model.predict([search_query])[0],
-                              k_nearest_neighbors=5, 
-                              fields="vector") 
+    vector_query = VectorizedQuery(
+        vector=embedding_model.predict([search_query])[0],
+        k_nearest_neighbors=5,
+        fields="vector",
+    )
 
-    results = search_client.search(  
-        search_text=None,  
-        vector_queries= [vector_query],
+    results = search_client.search(
+        search_text=None,
+        vector_queries=[vector_query],
         select=["id", "document", "path", "content"],
-        top=5
-    )   
+        top=5,
+    )
 
     final_results = [
         {
